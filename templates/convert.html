@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Converter</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        .title-gradient {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .upload-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed #f5576c;
+        }
+
+        .upload-zone:hover {
+            border-color: #f5576c !important;
+            background-color: rgba(245, 87, 108, 0.05);
+        }
+
+        .image-preview {
+            max-width: 200px;
+            max-height: 200px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .conversion-card {
+            transition: all 0.3s ease;
+        }
+
+        .conversion-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .format-badge {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        /* Selected Files Preview Styles */
+        .selected-file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border: 1px solid #e3e6ea;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background-color: #f8f9fa;
+            animation: slideInDown 0.3s ease;
+        }
+
+        .selected-file-item .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+.selected-file-item .file-icon {
+            font-size: 1.2rem;
+            color: #f5576c;
+            flex-shrink: 0;
+        }
+
+        .selected-file-item .file-thumb {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid #e3e6ea;
+            background-color: #eee;
+        }
+
+        .selected-file-item .file-name {
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin: 0;
+        }
+
+        .selected-file-item .file-size {
+            font-size: 0.75rem;
+            color: #6c757d;
+            margin: 0;
+        }
+
+        .remove-file-btn {
+            background: none;
+            border: none;
+            color: #dc3545;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .remove-file-btn:hover {
+            background-color: rgba(220, 53, 69, 0.1);
+            transform: scale(1.1);
+        }
+
+        /* Animations */
+        @keyframes slideInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-15px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeOutLeft {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+        }
+
+        @keyframes uploadProgress {
+            0% { width: 0%; }
+            100% { width: 100%; }
+        }
+
+        @keyframes fileBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .file-item-removing {
+            animation: fadeOutLeft 0.3s ease forwards;
+        }
+
+        .uploading-file {
+            animation: fileBounce 0.6s ease infinite;
+        }
+
+        .upload-progress-container {
+            display: none;
+            margin-top: 15px;
+        }
+
+        .upload-progress-bar {
+            height: 6px;
+            background-color: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .upload-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #f093fb, #f5576c);
+            border-radius: 4px;
+            animation: uploadProgress 2s ease forwards;
+        }
+
+        .upload-status-text {
+            font-size: 0.9rem;
+            color: #f5576c;
+            margin-top: 8px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="title-gradient mb-0">Image Converter</h1>
+                    <a href="{{ url_for('home') }}" class="btn btn-outline-secondary">
+                        <i class="bi bi-house-door"></i> Back to Home
+                    </a>
+                </div>
+
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert alert-success" role="alert">
+                            {% for message in messages %}
+                                {{ message }}<br>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Conversion Options -->
+                <div class="card shadow mb-4">
+                    <div class="card-body">
+                        <h3 class="card-title mb-4">Image Converter</h3>
+
+                        <!-- Tab Navigation -->
+                        <ul class="nav nav-tabs" id="convertTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab" aria-controls="upload" aria-selected="true">
+                                    <i class="bi bi-upload"></i> Upload New Images
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="select-tab" data-bs-toggle="tab" data-bs-target="#select" type="button" role="tab" aria-controls="select" aria-selected="false">
+                                    <i class="bi bi-images"></i> Select from Uploaded
+                                </button>
+                            </li>
+                        </ul>
+
+                        <!-- Tab Content -->
+                        <div class="tab-content mt-4" id="convertTabsContent">
+                            <!-- Upload Tab -->
+                            <div class="tab-pane fade show active" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+                                <div class="border border-primary border-2 border-dashed rounded p-4 mb-4 text-center upload-zone">
+                                    <form action="{{ url_for('convert_image') }}" method="post" enctype="multipart/form-data" id="uploadForm">
+                                        <div class="mb-3">
+                                            <input type="file" class="form-control" name="images" multiple required accept="image/*" id="fileInput" onchange="handleFiles(this.files)">
+                                        </div>
+
+                                        <!-- Selected Images Preview with X button -->
+                                        <div id="selectedFilesContainer" class="text-start mt-3" style="display: none;">
+                                            <h6 class="mb-2 text-start"><i class="bi bi-list-ul"></i> Selected Images (<span id="fileCount">0</span>)</h6>
+                                            <ul id="selectedFilesList" class="list-group list-group-flush mb-3"></ul>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-12">
+                                                <label for="to_format_upload" class="form-label">Convert To</label>
+                                                <select class="form-select" id="to_format_upload" name="to_format" required>
+                                                    <option value="">Select target format</option>
+                                                    <option value="jpg">JPG</option>
+                                                    <option value="png">PNG</option>
+                                                    <option value="bmp">BMP</option>
+                                                    <option value="tiff">TIFF</option>
+                                                    <option value="webp">WEBP</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3">
+                                            <small class="text-muted">Supported formats: JPG, PNG, BMP, TIFF, WEBP, GIF</small>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="text-center">
+                                    <button type="submit" form="uploadForm" class="btn btn-primary btn-lg">
+                                        <i class="bi bi-arrow-repeat"></i> Convert Images
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Select Tab -->
+                            <div class="tab-pane fade" id="select" role="tabpanel" aria-labelledby="select-tab">
+                                <form action="{{ url_for('convert_selected_images') }}" method="post" id="selectForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Select Images to Convert</label>
+                                        <div class="row g-3" id="imageSelection">
+                                            {% for filename, file_info in files_info.items() %}
+                                                {% if file_info.extension.lower() in ['jpg', 'jpeg', 'png', 'bmp', 'tiff', 'webp', 'gif'] %}
+                                                <div class="col-md-4 col-lg-3">
+                                                    <div class="card h-100">
+                                                        <div class="card-body text-center">
+                                                            <img src="{{ url_for('preview_file', filename=filename) }}" class="image-preview mb-2" alt="{{ filename }}">
+                                                            <div class="form-check">
+                                                                <input class="form-check-input" type="checkbox" name="selected_images" value="{{ filename }}" id="check_{{ loop.index }}">
+                                                                <label class="form-check-label small" for="check_{{ loop.index }}">
+                                                                    {{ filename }}
+                                                                </label>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                        {% if not files_info %}
+                                        <div class="text-center text-muted">
+                                            <p>No uploaded images found. Upload some images first.</p>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <label for="to_format_select" class="form-label">Convert To</label>
+                                            <select class="form-select" id="to_format_select" name="to_format" required>
+                                                <option value="">Select target format</option>
+                                                <option value="jpg">JPG</option>
+                                                <option value="png">PNG</option>
+                                                <option value="bmp">BMP</option>
+                                                <option value="tiff">TIFF</option>
+                                                <option value="webp">WEBP</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <small class="text-muted">Supported formats: JPG, PNG, BMP, TIFF, WEBP, GIF</small>
+                                    </div>
+                                </form>
+                                <div class="text-center">
+                                    <button type="submit" form="selectForm" class="btn btn-primary btn-lg" {% if not files_info %}disabled{% endif %}>
+                                        <i class="bi bi-arrow-repeat"></i> Convert Selected Images
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Converted Images Section -->
+                {% if converted_images %}
+                <div class="card shadow">
+                    <div class="card-body">
+                        <h3 class="card-title mb-4">Converted Images</h3>
+                        <div class="row g-3">
+                            {% for image in converted_images %}
+                            <div class="col-md-6 col-lg-4">
+                                <div class="card conversion-card h-100">
+                                    <div class="card-body text-center">
+                                        <img src="{{ url_for('download_converted', filename=image.filename) }}" class="image-preview mb-3" alt="{{ image.original_name }}">
+                                        <h6 class="card-title">{{ image.original_name }}</h6>
+                                        <p class="text-muted small mb-2">{{ image.conversion }}</p>
+                                        <span class="badge format-badge">{{ image.format_badge }}</span>
+                                        <div class="mt-3">
+                                            <a href="{{ url_for('download_converted', filename=image.filename) }}" class="btn btn-success btn-sm">
+                                                <i class="bi bi-download"></i> Download
+                                            </a>
+                                            <a href="{{ url_for('upload_converted', filename=image.filename) }}" class="btn btn-primary btn-sm ms-2">
+                                                <i class="bi bi-cloud-upload"></i> Upload to GitHub
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Auto-hide flash messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashMessages = document.querySelectorAll('.alert');
+            flashMessages.forEach(function(message) {
+                setTimeout(function() {
+                    message.style.transition = 'opacity 0.5s ease-out';
+                    message.style.opacity = '0';
+                    setTimeout(function() {
+                        message.remove();
+                    }, 500);
+                }, 5000);
+            });
+        });
+
+        // File selection preview & removal
+        let selectedFiles = [];
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function handleFiles(files) {
+            selectedFiles = Array.from(files);
+            renderSelectedFiles();
+        }
+
+        function renderSelectedFiles() {
+            const container = document.getElementById('selectedFilesContainer');
+            const list = document.getElementById('selectedFilesList');
+            const count = document.getElementById('fileCount');
+
+            if (selectedFiles.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+
+            container.style.display = 'block';
+            count.textContent = selectedFiles.length;
+            list.innerHTML = '';
+
+selectedFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.className = 'selected-file-item';
+                li.setAttribute('data-filekey', `${index}_${file.name}_${file.size}`);
+
+                const fileInfo = document.createElement('div');
+                fileInfo.className = 'file-info';
+                // Show real image thumbnail using object URL
+                const thumbUrl = URL.createObjectURL(file);
+                fileInfo.innerHTML = `
+                    <img src="${thumbUrl}" class="file-thumb" alt="${file.name}">
+                    <div class="flex-grow-1 min-w-0">
+                        <p class="file-name" title="${file.name}">${file.name}</p>
+                        <p class="file-size">${formatFileSize(file.size)}</p>
+                    </div>
+                `;
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-file-btn';
+                removeBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+                removeBtn.title = 'Remove image';
+                removeBtn.addEventListener('click', function() {
+                    removeFile(li);
+                });
+
+                li.appendChild(fileInfo);
+                li.appendChild(removeBtn);
+                list.appendChild(li);
+            });
+        }
+
+        function removeFile(item) {
+            if (item) {
+                item.classList.add('file-item-removing');
+                setTimeout(function() {
+                    const fileName = item.querySelector('.file-name').textContent.trim();
+                    const fileSize = item.querySelector('.file-size').textContent.trim();
+                    const index = selectedFiles.findIndex(f => {
+                        return f.name === fileName && formatFileSize(f.size) === fileSize;
+                    });
+                    if (index !== -1) {
+                        selectedFiles.splice(index, 1);
+                    }
+                    renderSelectedFiles();
+                    updateFileInput();
+                }, 300);
+            }
+        }
+
+        function updateFileInput() {
+            const fileInput = document.getElementById('fileInput');
+            const dt = new DataTransfer();
+            selectedFiles.forEach(file => dt.items.add(file));
+            fileInput.files = dt.files;
+        }
+
+        // Upload animation on form submit
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadForm = document.getElementById('uploadForm');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', function(e) {
+                    if (selectedFiles.length === 0) return;
+
+                    // Add bounce animation to selected files
+                    const items = document.querySelectorAll('.selected-file-item');
+                    items.forEach((item, i) => {
+                        setTimeout(function() {
+                            item.classList.add('uploading-file');
+                        }, i * 200);
+                    });
+                });
+            }
+        });
+    </script>
+</body>
+</html>
